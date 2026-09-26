@@ -54,6 +54,72 @@ export const aiService = {
   },
 
   /**
+   * Fitur 2: Evaluasi AI Jawaban Siswa
+   * Menghasilkan:
+   * 1. Status ketepatan / Skor pemahaman (0-100)
+   * 2. Umpan balik (feedback) konstruktif
+   * 3. Penjelasan komprehensif / kunci konsep yang benar
+   */
+  evaluateStudentAnswer(caseItem, studentAnswer) {
+    const transcript = (studentAnswer || '').trim();
+    const cermin = this.analyzeArgumentStructure(transcript);
+    const fakta = this.getVerifiedFactsForTopic(caseItem, transcript);
+    const trend = this.getTrendAndUniqueFact(caseItem);
+
+    const score = cermin.skorArgumen;
+    let statusKetepatan = 'Cukup Baik & Relevan';
+    if (score >= 88) {
+      statusKetepatan = 'Sangat Kritis & Konstruktif';
+    } else if (score < 75) {
+      statusKetepatan = 'Perlu Penguatan Bukti & Alasan';
+    }
+
+    // Constructive feedback based on Bloom level and argument quality
+    let feedbackKekuatan = '';
+    let feedbackPerbaikan = '';
+
+    if (cermin.wordCount < 15) {
+      feedbackKekuatan = 'Gagasan awal sudah terlihat, namun masih sangat ringkas.';
+      feedbackPerbaikan = 'Uraikan klaim pokokmu lebih mendalam dengan menyertakan alasan logis ("karena...") serta contoh situasi nyata.';
+    } else {
+      feedbackKekuatan = `Argumenmu berhasil mengutarakan ${cermin.klaim ? 'klaim yang jelas' : 'sudut pandang yang relevan'} terhadap dilema ${caseItem?.judulKasus || 'kasus ini'}.`;
+      if (cermin.fillerHits > 3) {
+        feedbackPerbaikan = `Kurangi penggunaan jeda filler ("${cermin.detectedFillers.slice(0, 2).join('", "')}") dan perkuat bukti pembanding agar kredibilitas analisis semakin meyakinkan.`;
+      } else if (!/karena|sebab|dikarenakan/i.test(transcript)) {
+        feedbackPerbaikan = 'Hubungkan klaimmu dengan kata penghubung kausalitas ("karena..." atau "sebab...") agar alur nalar sebab-akibat terbaca runtut.';
+      } else {
+        feedbackPerbaikan = 'Tingkatkan ketajaman analisis dengan mempertimbangkan sudut pandang pihak yang kontra serta menyertakan data empiris rujukan.';
+      }
+    }
+
+    const constructiveFeedback = `${feedbackKekuatan} ${feedbackPerbaikan}`;
+
+    // Comprehensive conceptual explanation specific to case or learning material
+    let penjelasanKonsep = '';
+    if (caseItem?.kategori?.includes('Pendidikan') || caseItem?.judulKasus?.toLowerCase().includes('ujian')) {
+      penjelasanKonsep = 'Kunci konsep berakar pada pergeseran paradigma asesmen: menyeimbangkan integritas kognitif (menjaga daya memori kerja dan pemahaman otentik) dengan literasi masa depan (kemampuan audit prompt dan validasi fakta primer). Pelarangan total tanpa pembekalan seringkali melahirkan ilusi kompetensi, sedangkan pengujian berbasis proses melatih metakognisi siswa.';
+    } else if (caseItem?.kategori?.includes('Ekologi') || caseItem?.judulKasus?.toLowerCase().includes('antariksa') || caseItem?.judulKasus?.toLowerCase().includes('pajak')) {
+      penjelasanKonsep = 'Kunci konsep terletak pada prinsip "Keadilan Antargenerasi" dan doktrin "Polluter Pays" dalam hukum lingkungan. Eksplorasi sains tingkat tinggi memerlukan pendanaan besar, namun beban eksternalitas terhadap atmosfer bumi (global commons) harus diimbangi dengan kompensasi restorasi ekologis bagi populasi yang rentan terhadap krisis iklim.';
+    } else if (caseItem?.kategori?.includes('Hukum') || caseItem?.judulKasus?.toLowerCase().includes('hak cipta')) {
+      penjelasanKonsep = 'Kunci konsep mengacu pada doktrin "Human Authorship Requirement": perlindungan hak cipta mensyaratkan adanya kontribusi kreatif manusia yang substansial. Transparansi metodologi dan integritas atribusi adalah pembeda mutlak antara orisinalitas kolaboratif dengan plagiasi otomatis.';
+    } else {
+      penjelasanKonsep = `Kunci konsep pada studi kasus "${caseItem?.judulKasus || 'ini'}" menekankan bahwa pengambilan keputusan berbasis Taksonomi Bloom level ${caseItem?.levelBloom || 'Tinggi'} menuntut pembongkaran asumsi tersembunyi, penimbangan dampak jangka panjang bagi semua pemangku kepentingan, dan penyusunan solusi alternatif yang etis serta terukur.`;
+    }
+
+    return {
+      skor: score,
+      statusKetepatan,
+      feedback: constructiveFeedback,
+      penjelasanKonsep,
+      cermin,
+      fakta,
+      trend,
+      transcript,
+      wordCount: cermin.wordCount
+    };
+  },
+
+  /**
    * Pilar 3: Cermin Argumen (Analisis Struktur Nalar: Klaim, Alasan, Bukti)
    */
   analyzeArgumentStructure(transcript) {

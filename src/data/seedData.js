@@ -244,3 +244,175 @@ export const INITIAL_STUDENT_JOURNAL = [
     statusArena: 'Selesai Diskusi'
   }
 ];
+
+export const INITIAL_EVALUATION_RECORDS = [
+  {
+    id: 'eval-1',
+    siswaId: 'usr-siswa-2',
+    siswaNama: 'Nabila Putri',
+    kelas: 'XI-IPA 2',
+    caseId: 'case-1',
+    topikKasus: 'Larangan vs Integrasi Penuh AI di Ujian Akhir',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    jawabanTeks: 'Menurut saya, melarang total AI di sekolah adalah langkah mundur yang naif. Dunia kerja menuntut kita menguasai kolaborasi dengan alat ini. Yang seharusnya diuji guru bukan lagi teks akhirnya, melainkan logika prompt dan kemampuan kita memverifikasi fakta hasil AI dengan sumber primer.',
+    skor: 88,
+    statusKetepatan: 'Sangat Kritis & Konstruktif',
+    feedback: 'Klaim pokok sangat tegas dan kontekstual terhadap tuntutan abad ke-21. Alur logika antara persiapan dunia kerja dengan kebutuhan asesmen prompt terbangun kokoh. Rekomendasi: Sertakan rujukan riset empiris atau data persentase adopsi industri untuk menyempurnakan bukti.',
+    penjelasanKonsep: 'Kunci konsep berpusat pada pergeseran Taksonomi Bloom: dari retensi memori statis (mengingat) menuju evaluasi kritis dan audit validitas (mengevaluasi). Pelarangan total tanpa literasi prompt berisiko memunculkan kesenjangan kompetensi.',
+    durasiPengerjaan: '01:14',
+    tanggal: '2026-09-25 10:15'
+  },
+  {
+    id: 'eval-2',
+    siswaId: 'usr-siswa-3',
+    siswaNama: 'Budi Prakoso',
+    kelas: 'XI-IPA 2',
+    caseId: 'case-1',
+    topikKasus: 'Larangan vs Integrasi Penuh AI di Ujian Akhir',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    jawabanTeks: 'Saya sepakat jika untuk ujian akhir dilarang total. Ujian bertujuan mengukur kapasitas memori kerja dan pemecahan masalah otentik individu. Jika AI diizinkan di ruang ujian, yang diuji adalah kecepatan mengetik prompt, bukan daya ingat atau pemahaman konsep biologis maupun matematis anak.',
+    skor: 82,
+    statusKetepatan: 'Cukup Baik & Relevan',
+    feedback: 'Argumen mempertahankan nilai esensial memori kerja dengan baik. Terdapat identifikasi risiko ketergantungan kognitif. Saran: Pertimbangkan alternatif format evaluasi hibrida agar siswa tetap memiliki kesiapan adaptasi teknologi.',
+    penjelasanKonsep: 'Konsep beban kognitif (Cognitive Load Theory) menjelaskan bahwa pemikiran tingkat tinggi membutuhkan pondasi skema pengetahuan yang tersimpan kuat di memori jangka panjang, sehingga verifikasi pemahaman dasar tanpa alat bantu tetap memiliki urgensi pedagogis.',
+    durasiPengerjaan: '01:30',
+    tanggal: '2026-09-25 09:40'
+  },
+  {
+    id: 'eval-3',
+    siswaId: 'usr-siswa-4',
+    siswaNama: 'Aisyah Maharani',
+    kelas: 'XI-IPA 2',
+    caseId: 'case-1',
+    topikKasus: 'Larangan vs Integrasi Penuh AI di Ujian Akhir',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    jawabanTeks: 'Solusi jalan tengah adalah ujian dua tahap. Tahap pertama 45 menit tanpa gawai sama sekali untuk mengecek konsep dasar. Tahap kedua 45 menit dengan AI, di mana siswa diminta memecahkan studi kasus kompleks yang sengaja memerlukan analisis sintesis tingkat tinggi.',
+    skor: 94,
+    statusKetepatan: 'Sangat Kritis & Komprehensif',
+    feedback: 'Analisis tingkat tinggi (Bloom: Kreasi) yang memecah kebuntuan polarisasi "larang vs bebas". Desain penilaian dua tahap menjawab kebutuhan validitas akademis sekaligus relevansi kecakapan modern secara terukur.',
+    penjelasanKonsep: 'Konsep asesmen autentik bertingkat: mengkombinasikan penilaian formatif nalar mandiri dengan penilaian sumatif berbasis sintesis terapan. Model ini direkomendasikan oleh laporan UNESCO 2024 untuk memitigasi ilusi kompetensi.',
+    durasiPengerjaan: '01:05',
+    tanggal: '2026-09-24 16:20'
+  },
+  {
+    id: 'eval-4',
+    siswaId: 'usr-siswa-5',
+    siswaNama: 'Farhan Maulana',
+    kelas: 'XI-IPA 2',
+    caseId: 'case-4',
+    topikKasus: 'Pajak Miliarder Luar Angkasa untuk Subsidi Iklim',
+    materiJudul: 'Bab 7: Dilema Eksplorasi Luar Angkasa Komersial vs Restorasi Bumi',
+    jawabanTeks: 'Pajak penerbangan roket komersial harus diterapkan karena atmosfer bumi merupakan milik bersama seluruh umat manusia. Uang pajak tersebut dapat dialokasikan langsung untuk mitigasi krisis iklim di wilayah pesisir yang terancam tenggelam.',
+    skor: 78,
+    statusKetepatan: 'Perlu Penguatan Bukti',
+    feedback: 'Prinsip keadilan lingkungan (environmental justice) disampaikan dengan jelas. Namun, perlu diperkuat dengan analisis dampak terhadap inovasi riset sains luar angkasa dan mekanisme regulasi fiskal antarnegara.',
+    penjelasanKonsep: 'Tragedy of the Commons dan prinsip "Polluter Pays" dalam hukum lingkungan internasional: aktivitas komersial berkadar emisi tinggi wajib menginternalisasi biaya eksternalitas lingkungan tanpa mematikan insentif riset masa depan.',
+    durasiPengerjaan: '01:45',
+    tanggal: '2026-09-24 11:15'
+  },
+  {
+    id: 'eval-5',
+    siswaId: 'usr-siswa-1',
+    siswaNama: 'Jason Pratama',
+    kelas: 'XI-IPA 2',
+    caseId: 'case-2',
+    topikKasus: 'Hak Cipta Esai Buatan AI: Milik Siswa atau Pengembang Algoritma?',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    jawabanTeks: 'Hak cipta semestinya tetap berada di tangan siswa jika proses kurasi dan sintesis intelektualnya nyata, namun penghargaan lomba wajib mencantumkan label karya hibrida. Kamera adalah alat bagi fotografer; begitu juga AI bagi penulis yang memiliki arah visi orisinal.',
+    skor: 89,
+    statusKetepatan: 'Sangat Kritis & Konstruktif',
+    feedback: 'Analogi fotografi yang digunakan sangat relevan dan memperjelas batas antara alat bantu vs subjek pencipta. Pengutaraan transparansi atribusi karya memperlihatkan kematangan etika ilmiah.',
+    penjelasanKonsep: 'Doktrin "Human Authorship Requirement" dalam hak kekayaan intelektual menetapkan bahwa perlindungan hak cipta mensyaratkan adanya kontribusi kreatif manusia yang substansial dalam memandu, memilih, dan menyusun luaran alat generatif.',
+    durasiPengerjaan: '01:14',
+    tanggal: '2026-09-20 14:35'
+  }
+];
+
+export const INITIAL_FORUM_POSTS = [
+  {
+    id: 'fp-1',
+    materiId: 'mat-1',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    kategori: 'Pendidikan & Teknologi',
+    judul: 'Etika Ujian Berbasis AI: Apakah Penilaian Perlu Beralih dari Teks Akhir ke Logika Prompt?',
+    penulisNama: 'Nabila Putri',
+    penulisRole: 'siswa',
+    penulisAvatar: 'NP',
+    isi: 'Berdasarkan studi kasus Bab 4 mengenai larangan vs integrasi AI, saya berpendapat bahwa melarang total penggunaan AI pada ujian akhir adalah pendekatan yang kurang realistis. Mengapa sekolah tidak beralih menilai transparansi prompt dan kemampuan verifikasi fakta rujukan daripada sekadar menilai naskah akhir? Bagaimana rekan-rekan dan bapak/ibu guru memandang efektivitas metode ini?',
+    tanggal: '25 Sep 2026, 09:30',
+    likes: 8,
+    comments: [
+      {
+        id: 'fpc-1',
+        penulisNama: 'Dra. Sri Wahyuni, M.Pd.',
+        penulisRole: 'pendamping',
+        penulisAvatar: 'SW',
+        isi: 'Pertanyaan yang sangat reflektif, Nabila. Namun dari kacamata pedagogis, jika siswa belum menguasai memori kerja konseptual dasar, bagaimana mereka dapat mendeteksi saat model AI mengalami halusinasi data? Evaluasi nalar dasar tetap butuh ruang mandiri.',
+        tanggal: '25 Sep 2026, 10:15'
+      },
+      {
+        id: 'fpc-2',
+        penulisNama: 'Aisyah Maharani',
+        penulisRole: 'siswa',
+        penulisAvatar: 'AM',
+        isi: 'Saya sepakat dengan Bu Sri. Format asesmen hibrida dua tahap mungkin adalah jalan tengah terbaik: tahap pertama menguji memori kerja murni tanpa gawai, tahap kedua menguji kolaborasi kritis dengan AI untuk studi kasus berskala besar.',
+        tanggal: '25 Sep 2026, 11:05'
+      }
+    ]
+  },
+  {
+    id: 'fp-2',
+    materiId: 'mat-2',
+    materiJudul: 'Bab 7: Dilema Eksplorasi Luar Angkasa Komersial vs Restorasi Bumi',
+    kategori: 'Sosial & Ekologi',
+    judul: 'Pajak Karbon Wisata Antariksa: Adilkah Mendanai Restorasi Ekologi Bumi dari Penerbangan Roket?',
+    penulisNama: 'Farhan Maulana',
+    penulisRole: 'siswa',
+    penulisAvatar: 'FM',
+    isi: 'Dalam materi Bab 7, kita membahas alokasi ratusan triliun rupiah untuk wisata luar angkasa swasta sementara pembiayaan transisi energi terbarukan global mengalami defisit. Apakah penerapan instrumen pajak 40% atas peluncuran komersial dapat menjadi preseden hukum lingkungan internasional yang adil?',
+    tanggal: '24 Sep 2026, 14:20',
+    likes: 5,
+    comments: [
+      {
+        id: 'fpc-3',
+        penulisNama: 'Jason Pratama',
+        penulisRole: 'siswa',
+        penulisAvatar: 'JP',
+        isi: 'Sangat adil. Lapisan stratosfer adalah barang publik global (global commons). Kerusakan ozon atau jejak emisi roket ditanggung oleh seluruh populasi bumi, sehingga retribusi kompensasi iklim sudah sepatutnya diwajibkan.',
+        tanggal: '24 Sep 2026, 15:02'
+      },
+      {
+        id: 'fpc-4',
+        penulisNama: 'Dra. Sri Wahyuni, M.Pd.',
+        penulisRole: 'pendamping',
+        penulisAvatar: 'SW',
+        isi: 'Analisis yang menarik, Farhan dan Jason. Pastikan kalian juga mempertimbangkan bagaimana instrumen pajak tersebut tidak justru mematikan riset satelit penginderaan jauh yang selama ini krusial untuk memantau deforestasi hutan tropis kita.',
+        tanggal: '24 Sep 2026, 16:30'
+      }
+    ]
+  },
+  {
+    id: 'fp-3',
+    materiId: 'mat-1',
+    materiJudul: 'Bab 4: Etika Kecerdasan Buatan & Transformasi Kognitif Siswa',
+    kategori: 'Hukum & Orisinalitas',
+    judul: 'Hak Kekayaan Intelektual pada Karya Tulis Ilmiah yang Dikembangkan dengan Bantuan LLM',
+    penulisNama: 'Budi Prakoso',
+    penulisRole: 'siswa',
+    penulisAvatar: 'BP',
+    isi: 'Jika seorang siswa merumuskan hipotesis sendiri namun meminta AI menyusun parafrase kalimat dan struktur bab, di manakah garis batas orisinalitas karya ilmiah? Apakah transparansi metodologi cukup untuk menggantikan kekhawatiran dewan juri lomba?',
+    tanggal: '24 Sep 2026, 08:45',
+    likes: 6,
+    comments: [
+      {
+        id: 'fpc-5',
+        penulisNama: 'Zahra Amelia',
+        penulisRole: 'siswa',
+        penulisAvatar: 'ZA',
+        isi: 'Standar akademik internasional saat ini (seperti IEEE dan APA) mewajibkan deklarasi peran alat AI pada bagian metodologi. Kuncinya ada pada akuntabilitas: siswa bertanggung jawab 100% atas kebenaran setiap kalimat yang tertulis.',
+        tanggal: '24 Sep 2026, 09:20'
+      }
+    ]
+  }
+];
+

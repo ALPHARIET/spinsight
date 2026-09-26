@@ -57,10 +57,10 @@ export const JurnalSiswa = () => {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-              <span className="mono-tag" style={{ background: '#f1f3f4', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#111827' }}>
-                // JURNAL & TELEMETRI
+              <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #dbeafe', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 600 }}>
+                Portofolio Reflektif
               </span>
-              <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>REFLECTIVE PORTFOLIO</span>
+              <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Rekam Jejak Siswa</span>
             </div>
             <h1 style={{ fontSize: '2.4rem', color: '#111827', letterSpacing: '-0.03em' }}>Rekam Jejak Nalar Lisan</h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
@@ -92,10 +92,10 @@ export const JurnalSiswa = () => {
         {/* 5 DIMENSI KEMAMPUAN BERNALAR */}
         <div className="glass-panel" style={{ padding: '2.25rem', marginBottom: '2.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 className="mono-tag" style={{ fontSize: '1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <TrendingUp size={16} /> // METRIK 5 DIMENSI KEMAMPUAN NALAR
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <TrendingUp size={16} color="#2563eb" /> 5 Dimensi Kemampuan Bernalar
             </h2>
-            <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>AI ARGUMENT MIRROR</span>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Rubrik Penilaian Terstruktur</span>
           </div>
 
           <div style={{
@@ -177,7 +177,7 @@ export const JurnalSiswa = () => {
                         j.levelBloom === 'Evaluasi' ? 'badge-bloom-evaluasi' :
                         j.levelBloom === 'Kreasi' ? 'badge-bloom-kreasi' : 'badge-bloom-analisis'
                       }`}>
-                        // {j.levelBloom}
+                        Taksonomi {j.levelBloom}
                       </span>
                       <span className="mono-tag" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                         <Calendar size={12} /> {j.tanggal}
@@ -224,13 +224,13 @@ export const JurnalSiswa = () => {
                     border: '1px solid rgba(0,0,0,0.07)'
                   }}>
                     <div>
-                      <strong className="mono-tag" style={{ color: '#111827' }}>// KLAIM:</strong> {j.cermin.klaim}
+                      <strong style={{ color: '#0f172a', fontWeight: 600 }}>Klaim:</strong> {j.cermin.klaim}
                     </div>
                     <div>
-                      <strong className="mono-tag" style={{ color: '#111827' }}>// ALASAN:</strong> {j.cermin.alasan}
+                      <strong style={{ color: '#0f172a', fontWeight: 600 }}>Alasan:</strong> {j.cermin.alasan}
                     </div>
                     <div>
-                      <strong className="mono-tag" style={{ color: '#111827' }}>// BUKTI:</strong> {j.cermin.bukti}
+                      <strong style={{ color: '#0f172a', fontWeight: 600 }}>Bukti:</strong> {j.cermin.bukti}
                     </div>
                   </div>
                 )}

@@ -130,11 +130,11 @@ export const ArenaPage = () => {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-              <span className="mono-tag" style={{ background: '#f1f3f4', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#111827' }}>
-                // PILAR 4 : ARENA
+              <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #dbeafe', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 600 }}>
+                Arena Debat Kasus
               </span>
-              <span className="mono-tag" style={{ color: '#059669', background: '#ecfdf5', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)' }}>
-                ● UNLOCKED
+              <span style={{ color: '#047857', background: '#ecfdf5', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 600 }}>
+                Akses Terbuka
               </span>
             </div>
             <h1 style={{ fontSize: '2.2rem', color: '#111827', letterSpacing: '-0.03em' }}>{activeCase.judulKasus}</h1>
@@ -190,19 +190,19 @@ export const ArenaPage = () => {
             </div>
 
             <div className="grid-3" style={{ gap: '1rem', fontSize: '0.86rem' }}>
-              <div style={{ background: '#f8f9fa', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                <strong className="mono-tag" style={{ color: '#059669', display: 'block', marginBottom: '0.45rem' }}>// TITIK TEMU</strong>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.55 }}>{currentSynthesis.titikTemu}</p>
+              <div style={{ background: '#f8fafc', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid #e2e8f0' }}>
+                <strong style={{ color: '#047857', display: 'block', marginBottom: '0.35rem', fontSize: '0.82rem', fontWeight: 700 }}>Titik Temu Konsensus</strong>
+                <p style={{ color: '#475569', lineHeight: 1.55 }}>{currentSynthesis.titikTemu}</p>
               </div>
 
-              <div style={{ background: '#f8f9fa', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                <strong className="mono-tag" style={{ color: '#e11d48', display: 'block', marginBottom: '0.45rem' }}>// TITIK BEDA</strong>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.55 }}>{currentSynthesis.titikBeda}</p>
+              <div style={{ background: '#f8fafc', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid #e2e8f0' }}>
+                <strong style={{ color: '#b91c1c', display: 'block', marginBottom: '0.35rem', fontSize: '0.82rem', fontWeight: 700 }}>Titik Perbedaan Sudut Pandang</strong>
+                <p style={{ color: '#475569', lineHeight: 1.55 }}>{currentSynthesis.titikBeda}</p>
               </div>
 
-              <div style={{ background: '#f8f9fa', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                <strong className="mono-tag" style={{ color: '#2563eb', display: 'block', marginBottom: '0.45rem' }}>// PERTANYAAN TERBUKA</strong>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.55 }}>{currentSynthesis.pertanyaanTerbuka}</p>
+              <div style={{ background: '#f8fafc', padding: '1.2rem', borderRadius: 'var(--radius-card-sm)', border: '1px solid #e2e8f0' }}>
+                <strong style={{ color: '#1d4ed8', display: 'block', marginBottom: '0.35rem', fontSize: '0.82rem', fontWeight: 700 }}>Pertanyaan Terbuka Kelas</strong>
+                <p style={{ color: '#475569', lineHeight: 1.55 }}>{currentSynthesis.pertanyaanTerbuka}</p>
               </div>
             </div>
           </div>

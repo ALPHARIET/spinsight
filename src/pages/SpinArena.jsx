@@ -4,16 +4,25 @@ import {
   RotateCw, 
   Clock, 
   Mic, 
-  Square, 
+  MicOff,
   Sparkles, 
   ArrowRight, 
   Edit3, 
   ShieldCheck, 
   ExternalLink, 
   Users, 
-  Zap
+  Zap,
+  CheckCircle2,
+  Award,
+  BookOpen,
+  BookMarked,
+  Send,
+  Trash2,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { PromptSpinner } from '../components/PromptSpinner';
 
 export const SpinArena = () => {
   const { 
@@ -21,10 +30,13 @@ export const SpinArena = () => {
     activeCaseId, 
     setActiveCaseId, 
     submitStudentResponse, 
-    setActivePage
+    setActivePage,
+    materials
   } = useApp();
 
-  const activeCase = cases.find(c => c.id === activeCaseId) || cases[0];
+  const activeCases = cases.filter(c => c.aktif);
+  const activeCase = activeCases.find(c => c.id === activeCaseId) || activeCases[0] || cases[0];
+  const activeMaterial = materials.find(m => m.id === activeCase?.materialId);
 
   // Wheel State
   const [isSpinning, setIsSpinning] = useState(false);
@@ -32,23 +44,23 @@ export const SpinArena = () => {
   const [mode, setMode] = useState('solo');
   const [selectedStudentSpeaker, setSelectedStudentSpeaker] = useState('');
 
-  // Step flow: 'spin' -> 'think' -> 'record' -> 'insight'
-  const [stage, setStage] = useState('spin');
+  // Flow Stage: 'input' (default ready to type) | 'insight' (after evaluation)
+  const [stage, setStage] = useState('input');
 
   // Think Timer State
   const [thinkSecondsLeft, setThinkSecondsLeft] = useState(activeCase?.durasi || 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
-  // Recording State
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordSeconds, setRecordSeconds] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [insightResult, setInsightResult] = useState(null);
+  // Student Answer Textarea State (METODE UTAMA: PENGETIKAN TEKS)
+  const [studentAnswer, setStudentAnswer] = useState('');
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null);
 
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerIntervalRef = useRef(null);
-  const recordIntervalRef = useRef(null);
+  // Speech-to-Text State (FITUR PENDUKUNG / SIDE FEATURE: WEB SPEECH API)
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const [speechToast, setSpeechToast] = useState('');
+  const recognitionRef = useRef(null);
 
   const CLASS_STUDENTS = [
     'Jason Pratama (Kamu)', 'Nabila Putri', 'Budi Prakoso', 'Aisyah Maharani',
@@ -59,16 +71,45 @@ export const SpinArena = () => {
     '#18181b', '#2563eb', '#059669', '#d97706', '#4b5563', '#7c3aed'
   ];
 
-  const handleSpin = () => {
-    if (isSpinning) return;
-    setIsSpinning(true);
-    setInsightResult(null);
+  // Initialize Web Speech API
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+    }
+  }, []);
 
-    const activeCases = cases.filter(c => c.aktif);
+  // Update think timer when active case changes
+  useEffect(() => {
+    if (activeCase?.durasi) {
+      setThinkSecondsLeft(activeCase.durasi);
+    }
+  }, [activeCase]);
+
+  // Timer interval
+  useEffect(() => {
+    let interval = null;
+    if (isTimerRunning && thinkSecondsLeft > 0) {
+      interval = setInterval(() => {
+        setThinkSecondsLeft(t => t - 1);
+      }, 1000);
+    } else if (thinkSecondsLeft === 0 && isTimerRunning) {
+      setIsTimerRunning(false);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, thinkSecondsLeft]);
+
+  // Wheel Spin Logic
+  const handleSpin = () => {
+    if (isSpinning || activeCases.length === 0) return;
+    setIsSpinning(true);
+    setEvaluationResult(null);
+    setStage('input');
+
     const targetIdx = Math.floor(Math.random() * activeCases.length);
     const targetCase = activeCases[targetIdx];
 
-    const extraTurns = 6;
+    const extraTurns = 5;
     const sliceDeg = 360 / activeCases.length;
     const newRotation = wheelRotation + (extraTurns * 360) + (targetIdx * sliceDeg);
 
@@ -83,8 +124,6 @@ export const SpinArena = () => {
       setIsSpinning(false);
       setActiveCaseId(targetCase.id);
       setThinkSecondsLeft(targetCase.durasi);
-      setStage('think');
-      setIsTimerRunning(true);
       confetti({
         particleCount: 50,
         spread: 60,
@@ -93,111 +132,133 @@ export const SpinArena = () => {
     }, 2800);
   };
 
-  useEffect(() => {
-    if (isTimerRunning && stage === 'think') {
-      timerIntervalRef.current = setInterval(() => {
-        setThinkSecondsLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerIntervalRef.current);
-            setIsTimerRunning(false);
-            setStage('record');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timerIntervalRef.current);
-  }, [isTimerRunning, stage]);
+  // Toggle Web Speech API recording
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const skipToRecord = () => {
-    clearInterval(timerIntervalRef.current);
-    setIsTimerRunning(false);
-    setStage('record');
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-      setRecordSeconds(0);
-
-      recordIntervalRef.current = setInterval(() => {
-        setRecordSeconds(s => s + 1);
-      }, 1000);
-    } catch (err) {
-      setIsRecording(true);
-      setRecordSeconds(0);
-      recordIntervalRef.current = setInterval(() => {
-        setRecordSeconds(s => s + 1);
-      }, 1000);
-    }
-  };
-
-  const stopRecording = () => {
-    if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
-    setIsRecording(false);
-
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-    }
-
-    if (!transcript) {
-      setTranscript(
-        'Menurut saya, kebijakan sekolah seharusnya tidak melarang total penggunaan AI melainkan mengajarkan cara memverifikasi akurasi faktualnya. Karena di masa depan, keterampilan menguji kebenaran rujukan adalah kunci orisinalitas nalar yang sesungguhnya.'
-      );
-    }
-  };
-
-  const loadFastDemoResponse = (presetIdx = 1) => {
-    if (presetIdx === 1) {
-      setTranscript(
-        'Saya berpendapat bahwa melarang penggunaan AI saat ujian akhir tidak sepenuhnya menyelesaikan masalah integritas. Sebab siswa tetap akan menggunakannya di luar kelas tanpa bimbingan etis. Yang terpenting adalah melatih siswa membongkar asumsi dan menyertakan bukti empiris dari jurnal resmi, bukan sekadar menghafal jawaban instan.'
-      );
-    } else {
-      setTranscript(
-        'Menurut pandangan saya, ujian akhir harus tetap bebas dari alat bantu AI untuk menguji memori kerja siswa secara mandiri. Akan tetapi, pada tugas proyek mingguan, siswa wajib memanfaatkan AI dengan melampirkan riwayat prompt dan bukti komparasi sumber.'
-      );
-    }
-  };
-
-  const handleProcessTranscript = () => {
-    if (!transcript.trim()) {
-      alert('Mohon isi atau rekam pendapat lisan Anda terlebih dahulu!');
+    if (!SpeechRecognition) {
+      setSpeechToast('Browser ini belum mendukung Web Speech API native. Gunakan preset suara atau ketik langsung.');
+      setTimeout(() => setSpeechToast(''), 4500);
       return;
     }
 
-    const mins = Math.floor(recordSeconds / 60);
-    const secs = recordSeconds % 60;
-    const durasiBicaraStr = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    if (isListening) {
+      // Stop listening
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      setSpeechToast('Perekaman suara selesai. Teks telah ditambahkan ke lembar jawaban.');
+      setTimeout(() => setSpeechToast(''), 3000);
+    } else {
+      // Start listening
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'id-ID';
+        recognition.continuous = true;
+        recognition.interimResults = false;
 
-    const res = submitStudentResponse({
-      caseId: activeCase.id,
-      transcript: transcript.trim(),
-      durasiPikir: activeCase.durasi,
-      durasiBicara: recordSeconds > 0 ? durasiBicaraStr : '01:12'
-    });
+        recognition.onstart = () => {
+          setIsListening(true);
+          setSpeechToast('🎙️ Mendengarkan suara... Silakan berbicara dalam Bahasa Indonesia.');
+        };
 
-    setInsightResult(res);
-    setStage('insight');
+        recognition.onresult = (event) => {
+          let currentTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            currentTranscript += event.results[i][0].transcript + ' ';
+          }
+          if (currentTranscript.trim()) {
+            setStudentAnswer((prev) => {
+              const separator = prev.trim() ? ' ' : '';
+              return prev.trim() + separator + currentTranscript.trim();
+            });
+          }
+        };
 
-    confetti({
-      particleCount: 60,
-      spread: 70,
-      origin: { y: 0.5 }
-    });
+        recognition.onerror = (event) => {
+          setIsListening(false);
+          setSpeechToast('Kendala mikrofon: ' + (event.error === 'not-allowed' ? 'Izin mikrofon ditolak.' : event.error));
+          setTimeout(() => setSpeechToast(''), 4000);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch (err) {
+        setIsListening(false);
+        setSpeechToast('Gagal mengaktifkan mikrofon browser.');
+        setTimeout(() => setSpeechToast(''), 3500);
+      }
+    }
   };
+
+  // Insert Simulated Voice Presets
+  const insertVoicePreset = (presetNumber) => {
+    let presetText = '';
+    if (presetNumber === 1) {
+      presetText = 'Menurut saya, melarang total penggunaan AI saat ujian akhir tidak menyelesaikan persoalan integritas. Karena di masa depan, keterampilan menguji kebenaran rujukan adalah kunci orisinalitas nalar yang sesungguhnya. Sekolah seharusnya menguji kemampuan verifikasi prompt siswa dengan sumber primer.';
+    } else {
+      presetText = 'Bagi saya, solusi yang adil adalah format ujian hibrida dua tahap. Tahap pertama 45 menit tanpa gawai sama sekali untuk mengukur memori kerja dan konsep dasar. Tahap kedua 45 menit dengan AI, di mana siswa diminta memecahkan studi kasus kompleks yang memerlukan sintesis tingkat tinggi.';
+    }
+
+    setStudentAnswer((prev) => {
+      const separator = prev.trim() ? '\n\n' : '';
+      return prev.trim() + separator + presetText;
+    });
+
+    setSpeechToast(`Preset suara #${presetNumber} berhasil disisipkan ke area pengetikan teks.`);
+    setTimeout(() => setSpeechToast(''), 3000);
+  };
+
+  // Insert Structure Helper Pill
+  const insertTemplatePill = (type) => {
+    let snippet = '';
+    if (type === 'klaim') snippet = 'Menurut pendapat saya, ';
+    else if (type === 'alasan') snippet = ' Hal ini dikarenakan ';
+    else if (type === 'bukti') snippet = ' Sebagai bukti konkret, misalnya ';
+
+    setStudentAnswer((prev) => prev + snippet);
+  };
+
+  // Submit Answer to AI for Comprehensive Evaluation
+  const handleSubmitAnswer = () => {
+    if (!studentAnswer.trim()) {
+      alert('Mohon ketikkan argumen atau analisis jawaban Anda terlebih dahulu!');
+      return;
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+
+    setIsEvaluating(true);
+
+    setTimeout(() => {
+      const res = submitStudentResponse({
+        caseId: activeCase.id,
+        transcript: studentAnswer.trim(),
+        durasiPikir: activeCase.durasi,
+        durasiBicara: '01:20'
+      });
+
+      setEvaluationResult(res);
+      setStage('insight');
+      setIsEvaluating(false);
+
+      confetti({
+        particleCount: 65,
+        spread: 70,
+        origin: { y: 0.5 }
+      });
+    }, 900);
+  };
+
+  const wordCount = studentAnswer.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="page-wrapper">
@@ -213,14 +274,17 @@ export const SpinArena = () => {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <span className="mono-tag" style={{ background: '#f1f3f4', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-pill)', color: '#111827' }}>
-                // PILAR 2 : SPIN ARENA
+              <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #dbeafe', padding: '0.15rem 0.6rem', borderRadius: 'var(--radius-pill)', fontSize: '0.72rem', fontWeight: 600 }}>
+                Aktivitas Pembelajaran Siswa
               </span>
-              <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>THINK-PAIR-SHARE</span>
+              <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Latihan Nalar Spontan</span>
             </div>
             <h1 style={{ fontSize: '2.4rem', color: '#111827', letterSpacing: '-0.03em' }}>
-              Mesin Berpikir Spontan & Rekam Nalar
+              Roda Putar & Lembar Jawaban Siswa
             </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Putar roda untuk mendapatkan tantangan studi kasus, ketikkan analisis argumenmu, dan dapatkan evaluasi AI seketika.
+            </p>
           </div>
 
           {/* Mode Switcher */}
@@ -235,7 +299,7 @@ export const SpinArena = () => {
               className={`btn btn-sm ${mode === 'solo' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ border: 'none', padding: '0.35rem 1rem' }}
             >
-              Mode Solo
+              Mode Mandiri
             </button>
             <button
               onClick={() => setMode('kelas')}
@@ -248,331 +312,259 @@ export const SpinArena = () => {
           </div>
         </div>
 
-        {/* STAGE 1: WHEEL & ACTIVE CASE */}
-        <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '2.5rem' }}>
+        {/* NOTIFICATION TOAST */}
+        {speechToast && (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '3rem',
-            alignItems: 'center'
+            background: '#111827',
+            color: '#ffffff',
+            padding: '0.85rem 1.4rem',
+            borderRadius: 'var(--radius-pill)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+            fontSize: '0.86rem',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
           }}>
-            {/* Visual Wheel */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              {/* Pointer */}
-              <div style={{
-                position: 'absolute',
-                top: '-14px',
-                zIndex: 10,
-                width: 0,
-                height: 0,
-                borderLeft: '12px solid transparent',
-                borderRight: '12px solid transparent',
-                borderTop: '22px solid #000000',
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
-              }} />
+            <Sparkles size={16} color="#38bdf8" />
+            <span>{speechToast}</span>
+          </div>
+        )}
 
-              <div style={{
-                width: '280px',
-                height: '280px',
-                borderRadius: '50%',
-                position: 'relative',
-                overflow: 'hidden',
-                transform: `rotate(${wheelRotation}deg)`,
-                transition: isSpinning ? 'transform 2.8s cubic-bezier(0.12, 0.9, 0.15, 1)' : 'none',
-                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
-                border: '6px solid #ffffff'
-              }}>
-                {cases.map((c, i) => {
-                  const angle = 360 / cases.length;
-                  const rotate = i * angle;
-                  return (
-                    <div
-                      key={c.id}
-                      style={{
-                        position: 'absolute',
-                        width: '50%',
-                        height: '50%',
-                        top: 0,
-                        right: 0,
-                        transformOrigin: '0% 100%',
-                        transform: `rotate(${rotate}deg) skewY(${90 - angle}deg)`,
-                        background: ANTIGRAVITY_PALETTE[i % ANTIGRAVITY_PALETTE.length],
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
-                      }}
-                    />
-                  );
-                })}
+        {/* SECTION 1: PROMPT REEL SPINNER (SESUAI DESAIN ACUAN USER) */}
+        <section style={{ marginBottom: '2.5rem' }}>
+          <PromptSpinner
+            cases={cases}
+            activeCaseId={activeCaseId}
+            onSelectCase={(id) => {
+              setActiveCaseId(id);
+              setEvaluationResult(null);
+            }}
+            onStartTimer={(caseItem) => {
+              if (caseItem?.id) setActiveCaseId(caseItem.id);
+              setIsTimerRunning(true);
+              const answerEl = document.getElementById('modul-jawaban');
+              if (answerEl) {
+                answerEl.scrollIntoView({ behavior: 'smooth' });
+                const textarea = answerEl.querySelector('textarea');
+                if (textarea) textarea.focus();
+              }
+            }}
+            materials={materials}
+          />
 
-                <div style={{
-                  position: 'absolute',
-                  width: '64px',
-                  height: '64px',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  borderRadius: '50%',
-                  background: '#ffffff',
-                  border: '2px solid rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 5,
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                }}>
-                  <RotateCw size={22} color="#111827" />
-                </div>
+          {/* Skenario Kasus Terpilih & Panduan Berpikir */}
+          <div className="glass-card" style={{ maxWidth: '780px', margin: '1.5rem auto 0', padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className={`badge ${
+                  activeCase?.levelBloom === 'Evaluasi' ? 'badge-bloom-evaluasi' :
+                  activeCase?.levelBloom === 'Kreasi' ? 'badge-bloom-kreasi' : 'badge-bloom-analisis'
+                }`}>
+                  Taksonomi {activeCase?.levelBloom || 'Analisis'}
+                </span>
+                <span className="mono-tag" style={{ color: 'var(--text-secondary)' }}>
+                  {activeCase?.kategori}
+                </span>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <button
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: '0.78rem', gap: '0.35rem', padding: '0.25rem 0.75rem' }}
+                >
+                  <Clock size={13} />
+                  {isTimerRunning ? `${thinkSecondsLeft}s Berjalan` : `${thinkSecondsLeft}s Timer Pikir`}
+                </button>
+              </div>
+            </div>
+
+            <p style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.96rem',
+              lineHeight: 1.7,
+              marginBottom: '1rem'
+            }}>
+              {activeCase?.teksKasus}
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {activeCase?.kataKunci?.map((k, i) => (
+                <span key={i} className="mono-tag" style={{ fontSize: '0.72rem', background: '#f8f9fa', padding: '0.2rem 0.55rem', border: '1px solid #e5e7eb' }}>
+                  #{k}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 2: MODUL JAWABAN SISWA (PENGETIKAN TEKS UTAMA & SPEECH-TO-TEXT OPSIONAL) */}
+        <section id="modul-jawaban" className="glass-panel" style={{ padding: '2.5rem', marginBottom: '2.5rem' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: '1.5rem',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <span style={{ background: '#f1f5f9', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#334155', fontSize: '0.75rem', fontWeight: 600 }}>
+                Lembar Jawaban Siswa
+              </span>
+              <h3 style={{ fontSize: '1.5rem', marginTop: '0.35rem', color: '#111827', letterSpacing: '-0.02em' }}>
+                Tuliskan Analisis & Kerangka Argumenmu
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                Gunakan kotak teks di bawah untuk merumuskan argumen. Gunakan tombol mikrofon jika ingin mendiktekan dengan suara.
+              </p>
+            </div>
+
+            {/* Quick Template Helper Buttons */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               <button
-                onClick={handleSpin}
-                disabled={isSpinning}
-                className="btn btn-primary btn-lg"
-                style={{ marginTop: '2rem', width: '260px' }}
+                type="button"
+                onClick={() => insertTemplatePill('klaim')}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                title="Sisipkan frasa klaim pokok"
               >
-                <RotateCw size={18} />
-                {isSpinning ? 'Mengacak Kasus...' : 'Putar Roda Kasus'}
+                + Frasa Klaim
+              </button>
+              <button
+                type="button"
+                onClick={() => insertTemplatePill('alasan')}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                title="Sisipkan frasa alasan logis"
+              >
+                + Frasa Alasan
+              </button>
+              <button
+                type="button"
+                onClick={() => insertTemplatePill('bukti')}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                title="Sisipkan frasa bukti nyata"
+              >
+                + Frasa Bukti
+              </button>
+            </div>
+          </div>
+
+          {/* Speech-to-Text Toolbar & Controls (Side Feature) */}
+          <div style={{
+            background: '#f8f9fa',
+            border: '1px solid rgba(0,0,0,0.08)',
+            borderRadius: 'var(--radius-card-sm)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Voice Dictation Button */}
+              <button
+                type="button"
+                onClick={toggleSpeechRecognition}
+                className={`btn btn-sm ${isListening ? 'btn-danger recording-pulse' : 'btn-primary'}`}
+                style={{ gap: '0.45rem', padding: '0.45rem 1rem' }}
+              >
+                {isListening ? <MicOff size={15} /> : <Mic size={15} />}
+                {isListening ? 'Berhenti Mendikte (Merekam...)' : 'Dikte Suara (Speech-to-Text)'}
               </button>
 
-              {mode === 'kelas' && selectedStudentSpeaker && (
-                <div className="mono-tag" style={{
-                  marginTop: '1rem',
-                  padding: '0.4rem 1rem',
-                  borderRadius: 'var(--radius-pill)',
-                  background: '#f1f3f4',
-                  color: '#111827'
-                }}>
-                  🎯 GILIRAN: <strong>{selectedStudentSpeaker}</strong>
-                </div>
+              <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>
+                {isListening ? '🔴 Berbicara sekarang...' : 'Web Speech API (Opsional)'}
+              </span>
+            </div>
+
+            {/* Presets Fallback */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="mono-tag" style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                CONTOH CEPAT:
+              </span>
+              <button
+                type="button"
+                onClick={() => insertVoicePreset(1)}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+              >
+                <Zap size={12} /> Preset 1
+              </button>
+              <button
+                type="button"
+                onClick={() => insertVoicePreset(2)}
+                className="btn btn-sm btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+              >
+                <Zap size={12} /> Preset 2
+              </button>
+            </div>
+          </div>
+
+          {/* MAIN TEXTAREA FOR STUDENT ARGUMENT (METODE UTAMA) */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <textarea
+              className="textarea-custom"
+              rows={8}
+              placeholder="Ketikkan argumenmu di sini secara leluasa...&#10;&#10;Contoh struktur nalar yang baik:&#10;1. Klaim: Sikap/solusi pokok yang kamu tawarkan.&#10;2. Alasan: 'Hal ini dikarenakan...' (hubungan sebab-akibat yang logis).&#10;3. Bukti: 'Sebagai contoh konkret...' (data empiris, komparasi rujukan, atau situasi nyata)."
+              value={studentAnswer}
+              onChange={(e) => setStudentAnswer(e.target.value)}
+              style={{
+                fontSize: '1rem',
+                lineHeight: 1.65,
+                padding: '1.2rem',
+                borderColor: isListening ? '#e11d48' : undefined,
+                boxShadow: isListening ? '0 0 0 3px rgba(225, 29, 72, 0.15)' : undefined
+              }}
+            />
+          </div>
+
+          {/* Action Row: Word Counter & Submit */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span className="mono-tag" style={{ color: wordCount >= 20 ? '#059669' : 'var(--text-muted)' }}>
+                {wordCount} Kata {wordCount >= 20 ? '✓ (Cukup mendalam)' : '(Minimal ~20 kata disarankan)'}
+              </span>
+
+              {studentAnswer.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setStudentAnswer('')}
+                  className="mono-tag"
+                  style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <Trash2 size={12} /> Bersihkan Teks
+                </button>
               )}
             </div>
 
-            {/* Case Card */}
-            <div className="glass-card" style={{ padding: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <span className={`badge ${
-                  activeCase.levelBloom === 'Evaluasi' ? 'badge-bloom-evaluasi' :
-                  activeCase.levelBloom === 'Kreasi' ? 'badge-bloom-kreasi' : 'badge-bloom-analisis'
-                }`}>
-                  // BLOOM: {activeCase.levelBloom}
-                </span>
-
-                <span className="mono-tag" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Clock size={13} /> {activeCase.durasi}s Pikir
-                </span>
-              </div>
-
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#111827', letterSpacing: '-0.02em' }}>
-                {activeCase.judulKasus}
-              </h2>
-
-              <p style={{
-                color: 'var(--text-secondary)',
-                fontSize: '1rem',
-                lineHeight: 1.7,
-                marginBottom: '1.5rem'
-              }}>
-                {activeCase.teksKasus}
-              </p>
-
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                {activeCase.kataKunci?.map((k, i) => (
-                  <span key={i} className="mono-tag" style={{ fontSize: '0.72rem', background: '#f8f9fa', padding: '0.2rem 0.55rem', border: '1px solid #e5e7eb' }}>
-                    #{k}
-                  </span>
-                ))}
-              </div>
-
-              <div style={{
-                padding: '0.85rem 1.2rem',
-                background: '#f8f9fa',
-                borderRadius: 'var(--radius-card-sm)',
-                border: '1px solid rgba(0,0,0,0.06)',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)'
-              }}>
-                💡 <strong>Productive Failure:</strong> Susun kerangka nalar sendiri sebelum fakta rujukan tampil.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* STAGE 2: THINKING TIMER */}
-        {stage === 'think' && (
-          <div className="glass-panel" style={{
-            padding: '2.5rem',
-            textAlign: 'center',
-            marginBottom: '2.5rem',
-            border: '1px solid rgba(0,0,0,0.1)'
-          }}>
-            <span className="mono-tag" style={{
-              background: '#f1f3f4',
-              padding: '0.25rem 0.75rem',
-              borderRadius: 'var(--radius-pill)',
-              color: '#111827',
-              marginBottom: '0.75rem',
-              display: 'inline-block'
-            }}>
-              [ TIMER BERPIKIR ]
-            </span>
-
-            <h3 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', color: '#111827', letterSpacing: '-0.03em' }}>
-              Susun Kerangka Argumenmu Sekarang
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '0 auto 1.5rem' }}>
-              Fokuskan pada: <strong>Klaim</strong> pokok, <strong>Alasan</strong> logis, dan contoh <strong>Bukti</strong> nyata.
-            </p>
-
-            <div style={{
-              width: '130px',
-              height: '130px',
-              borderRadius: '50%',
-              margin: '0 auto 1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#ffffff',
-              border: '3px solid #000000',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
-            }}>
-              <span style={{ fontSize: '2.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#111827' }}>
-                {thinkSecondsLeft}
-              </span>
-              <span className="mono-tag" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Detik
-              </span>
-            </div>
-
-            <button onClick={skipToRecord} className="btn btn-primary btn-lg">
-              <Mic size={17} />
-              Saya Siap Bicara Sekarang
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={isEvaluating || !studentAnswer.trim()}
+              className="btn btn-primary btn-lg"
+              style={{ padding: '0.85rem 2.2rem' }}
+            >
+              <Sparkles size={18} />
+              {isEvaluating ? 'AI Sedang Mengevaluasi Nalar...' : 'Kirim Jawaban untuk Evaluasi AI'}
             </button>
           </div>
-        )}
+        </section>
 
-        {/* STAGE 3: RECORD SPEECH & AUTO-TRANSCRIPTION */}
-        {(stage === 'record' || stage === 'insight') && (
-          <div className="glass-panel" style={{ padding: '2.25rem', marginBottom: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
-              <div>
-                <span className="mono-tag" style={{ background: '#f1f3f4', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#111827' }}>
-                  // PEREKAMAN AUDIO BROWSER
-                </span>
-                <h3 style={{ fontSize: '1.4rem', marginTop: '0.35rem', color: '#111827' }}>
-                  Rekam Jawaban Lisanmu Langsung
-                </h3>
-              </div>
-              <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>
-                MediaRecorder API Native
-              </span>
-            </div>
-
-            <div className="grid-2" style={{ alignItems: 'start' }}>
-              {/* Recording Box */}
-              <div style={{
-                background: '#f8f9fa',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: 'var(--radius-card-sm)',
-                padding: '2rem',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  width: '85px',
-                  height: '85px',
-                  borderRadius: '50%',
-                  margin: '0 auto 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: isRecording ? '#fee2e2' : '#000000',
-                  border: isRecording ? '2px solid #e11d48' : 'none',
-                  cursor: 'pointer'
-                }}
-                className={isRecording ? 'recording-pulse' : ''}
-                onClick={isRecording ? stopRecording : startRecording}
-                >
-                  <Mic size={34} color={isRecording ? '#e11d48' : '#ffffff'} />
-                </div>
-
-                <div style={{ fontSize: '1.3rem', fontWeight: 700, fontFamily: 'var(--font-mono)', marginBottom: '0.4rem', color: '#111827' }}>
-                  {Math.floor(recordSeconds / 60)}:{(recordSeconds % 60).toString().padStart(2, '0')}
-                </div>
-
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  {isRecording ? '🔴 Merekam audio... Klik tombol untuk berhenti.' : 'Klik tombol di atas untuk mulai merekam.'}
-                </p>
-
-                {isRecording && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', height: '30px', marginBottom: '1.25rem' }}>
-                    {[...Array(16)].map((_, i) => (
-                      <span key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.08}s` }} />
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {isRecording ? (
-                    <button onClick={stopRecording} className="btn btn-danger btn-sm">
-                      <Square size={14} /> Selesai Merekam
-                    </button>
-                  ) : (
-                    <button onClick={startRecording} className="btn btn-primary btn-sm">
-                      <Mic size={14} /> Mulai Rekam
-                    </button>
-                  )}
-
-                  <button onClick={() => loadFastDemoResponse(1)} className="btn btn-secondary btn-sm" title="Muat contoh suara cepat">
-                    <Zap size={13} /> Preset 1
-                  </button>
-                  <button onClick={() => loadFastDemoResponse(2)} className="btn btn-secondary btn-sm" title="Muat contoh suara 2">
-                    <Zap size={13} /> Preset 2
-                  </button>
-                </div>
-              </div>
-
-              {/* Transcription Box */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#111827' }}>
-                    <Edit3 size={15} color="#111827" />
-                    Transkrip Jawaban Lisan (Koreksi Akses Lokal)
-                  </label>
-                  <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>
-                    Mitigasi Bab 10
-                  </span>
-                </div>
-
-                <textarea
-                  className="textarea-custom"
-                  rows={6}
-                  placeholder="Hasil transkripsi suara otomatis akan muncul di sini. Kamu bebas mengedit teks jika dialek lokal kurang terbaca sempurna oleh mic..."
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>
-                    {transcript.split(/\s+/).filter(Boolean).length} kata terdeteksi
-                  </span>
-
-                  <button
-                    onClick={handleProcessTranscript}
-                    disabled={!transcript.trim()}
-                    className="btn btn-primary"
-                    style={{ padding: '0.75rem 1.6rem' }}
-                  >
-                    <Sparkles size={16} />
-                    Uji Struktur Nalar & Buka Arena
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STAGE 4: PILAR 3 — INSIGHT PANEL (3 Cards) */}
-        {insightResult && (
-          <section style={{ marginBottom: '3rem' }}>
+        {/* SECTION 3: HASIL EVALUASI AI (PILAR 3 — INSIGHT PANEL) */}
+        {evaluationResult && (
+          <section style={{ marginBottom: '3.5rem' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -583,169 +575,206 @@ export const SpinArena = () => {
             }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  <span className="mono-tag" style={{ background: '#f1f3f4', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#111827' }}>
-                    // PILAR 3 : INSIGHT PANEL
+                  <span style={{ background: '#f1f5f9', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', color: '#334155', fontSize: '0.75rem', fontWeight: 600 }}>
+                    Hasil Evaluasi Formatif
+                  </span>
+                  <span style={{ color: '#047857', background: '#ecfdf5', padding: '0.2rem 0.65rem', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 600 }}>
+                    Tersimpan di Rekap Kelas & Portofolio
                   </span>
                 </div>
-                <h2 style={{ fontSize: '1.9rem', color: '#111827', letterSpacing: '-0.03em' }}>
-                  Evaluasi Nalar & Perspektif Terverifikasi
+                <h2 style={{ fontSize: '2rem', color: '#111827', letterSpacing: '-0.03em' }}>
+                  Evaluasi Nalar & Perspektif AI
                 </h2>
               </div>
 
-              <button
-                onClick={() => setActivePage('arena')}
-                className="btn btn-primary btn-lg"
-                style={{ gap: '0.75rem' }}
-              >
-                <Users size={18} />
-                Buka Arena Diskusi Kelas
-                <ArrowRight size={17} />
-              </button>
-            </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setActivePage('forum')}
+                  className="btn btn-primary"
+                  style={{ gap: '0.6rem' }}
+                >
+                  <BookOpen size={16} />
+                  Bahas di Forum Diskusi
+                  <ArrowRight size={15} />
+                </button>
 
-            {/* Note alert */}
-            <div style={{
-              background: '#f8f9fa',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: 'var(--radius-card-sm)',
-              padding: '1rem 1.25rem',
-              marginBottom: '1.5rem',
-              fontSize: '0.88rem',
-              color: 'var(--text-secondary)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              <ShieldCheck size={20} color="#111827" />
-              <div>
-                <strong>Prinsip Anti-Kebenaran Tunggal:</strong> Sistem tidak pernah menyebut "jawaban yang benar". Framing yang digunakan adalah "perspektif dari sumber terpercaya", melatih kerendahan hati nalar siswa.
+                <button
+                  onClick={() => setActivePage('jurnal')}
+                  className="btn btn-secondary"
+                  style={{ gap: '0.5rem' }}
+                >
+                  <BookMarked size={16} />
+                  Lihat Jurnal Reflektif
+                </button>
               </div>
             </div>
 
-            {/* THE 3 CARDS */}
-            <div className="grid-3">
-              {/* KARTU 1: CERMIN ARGUMEN */}
+            {/* SCORE HIGHLIGHT & STATUS CARD */}
+            <div className="glass-panel" style={{
+              padding: '2rem',
+              marginBottom: '2rem',
+              border: '1px solid rgba(0,0,0,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.5rem'
+            }}>
+              <div style={{ flex: 1, minWidth: '280px' }}>
+                <span className="mono-tag" style={{ color: 'var(--text-muted)' }}>PREDIKAT KETEPATAN NALAR:</span>
+                <h3 style={{ fontSize: '1.6rem', color: '#111827', margin: '0.3rem 0', letterSpacing: '-0.02em' }}>
+                  {evaluationResult.statusKetepatan}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+                  Jawaban telah dianalisis berdasarkan struktur klaim, logika kausalitas, dan relevansi konsep bahan ajar.
+                </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                background: '#f8f9fa',
+                padding: '1rem 1.75rem',
+                borderRadius: 'var(--radius-card-sm)',
+                border: '1px solid rgba(0,0,0,0.08)'
+              }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  background: evaluationResult.skor >= 85 ? '#ecfdf5' : '#eff6ff',
+                  color: evaluationResult.skor >= 85 ? '#059669' : '#1d4ed8',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Award size={28} />
+                </div>
+                <div>
+                  <div className="mono-tag" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>SKOR PEMAHAMAN</div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#111827', lineHeight: 1.1 }}>
+                    {evaluationResult.skor} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ 100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3 CORE PILLARS OF EVALUATION */}
+            <div className="grid-3" style={{ marginBottom: '2rem' }}>
+              {/* KARTU 1: FEEDBACK KONSTRUKTIF AI */}
               <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 className="mono-tag" style={{ fontSize: '0.9rem', color: '#111827' }}>[ 01 ] CERMIN ARGUMEN</h3>
+                  <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <CheckCircle2 size={16} /> Umpan Balik Konstruktif
+                  </h3>
+                </div>
+
+                <div style={{
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '14px',
+                  padding: '1.1rem',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                  color: '#065f46',
+                  flex: 1
+                }}>
+                  {evaluationResult.feedback}
+                </div>
+              </div>
+
+              {/* KARTU 2: PENJELASAN KOMPREHENSIF / KUNCI KONSEP */}
+              <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <BookOpen size={16} /> Kunci Konsep & Penjelasan
+                  </h3>
+                </div>
+
+                <div style={{
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '14px',
+                  padding: '1.1rem',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                  color: '#1e40af',
+                  flex: 1
+                }}>
+                  {evaluationResult.penjelasanKonsep}
+                </div>
+              </div>
+
+              {/* KARTU 3: CERMIN STRUKTUR ARGUMEN (Klaim, Alasan, Bukti) */}
+              <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <h3 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Edit3 size={15} /> Struktur Argumen
+                  </h3>
                   <span className="mono-tag" style={{ color: '#059669', fontWeight: 700 }}>
-                    SKOR: {insightResult.cermin.skorArgumen}/100
+                    Kerapian: {evaluationResult.cermin.clarityScore}%
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, fontSize: '0.86rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.83rem', flex: 1 }}>
                   <div>
-                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.2rem' }}>
-                      📌 Klaim Pokok:
-                    </strong>
-                    <div style={{ color: 'var(--text-secondary)', background: '#f8f9fa', padding: '0.65rem', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                      {insightResult.cermin.klaim}
+                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.15rem' }}>📌 Klaim:</strong>
+                    <div style={{ background: '#f8f9fa', padding: '0.55rem', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      {evaluationResult.cermin.klaim}
                     </div>
                   </div>
-
                   <div>
-                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.2rem' }}>
-                      🧠 Alasan:
-                    </strong>
-                    <div style={{ color: 'var(--text-secondary)', background: '#f8f9fa', padding: '0.65rem', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                      {insightResult.cermin.alasan}
+                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.15rem' }}>🧠 Alasan:</strong>
+                    <div style={{ background: '#f8f9fa', padding: '0.55rem', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      {evaluationResult.cermin.alasan}
                     </div>
                   </div>
-
                   <div>
-                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.2rem' }}>
-                      🔍 Bukti:
-                    </strong>
-                    <div style={{ color: 'var(--text-secondary)', background: '#f8f9fa', padding: '0.65rem', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                      {insightResult.cermin.bukti}
+                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.15rem' }}>🔍 Bukti:</strong>
+                    <div style={{ background: '#f8f9fa', padding: '0.55rem', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      {evaluationResult.cermin.bukti}
                     </div>
-                  </div>
-
-                  <div>
-                    <strong style={{ color: '#d97706', display: 'block', marginBottom: '0.2rem' }}>
-                      ⚠️ Asumsi Belum Teruji:
-                    </strong>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                      {insightResult.cermin.asumsiBelumDiuji}
-                    </div>
-                  </div>
-
-                  <div style={{
-                    marginTop: 'auto',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid rgba(0,0,0,0.06)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: '0.78rem',
-                    color: 'var(--text-muted)'
-                  }}>
-                    <span className="mono-tag">Fillers: {insightResult.cermin.fillerHits}</span>
-                    <span className="mono-tag">Clarity: {insightResult.cermin.clarityScore}%</span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* KARTU 2: FAKTA TERVERIFIKASI */}
-              <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 className="mono-tag" style={{ fontSize: '0.9rem', color: '#111827' }}>[ 02 ] FAKTA TERVERIFIKASI</h3>
-                  <span className="mono-tag" style={{ color: '#2563eb' }}>WHITELIST RAG</span>
+            {/* VERIFIED FACTS COMPARISON (WHITELIST CITATIONS) */}
+            {evaluationResult.fakta && (
+              <div className="glass-panel" style={{ padding: '1.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldCheck size={18} color="#0f172a" />
+                    <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
+                      Komparasi Rujukan Resmi Terverifikasi
+                    </h3>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Sumber Akademik (Kemdikbud/UNESCO/Garuda)</span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, fontSize: '0.86rem' }}>
-                  {insightResult.fakta.map((f) => (
-                    <div key={f.id} className="glass-card" style={{ padding: '0.85rem' }}>
+                <div className="grid-3" style={{ gap: '1rem' }}>
+                  {evaluationResult.fakta.map((f) => (
+                    <div key={f.id} className="glass-card" style={{ padding: '1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                         <span className={`badge ${f.tipe === 'Menguatkan' ? 'badge-bloom-analisis' : 'badge-bloom-evaluasi'}`} style={{ fontSize: '0.68rem' }}>
-                          // {f.tipe}
+                          {f.tipe}
                         </span>
                         <a href={f.link} target="_blank" rel="noreferrer" style={{ color: '#111827', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600 }}>
                           Rujukan <ExternalLink size={11} />
                         </a>
                       </div>
-                      <div style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.25rem', color: '#111827' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.84rem', marginBottom: '0.3rem', color: '#111827' }}>
                         {f.sumber}
                       </div>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.45 }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5 }}>
                         {f.ringkasan}
                       </p>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* KARTU 3: TREND & FAKTA UNIK */}
-              <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 className="mono-tag" style={{ fontSize: '0.9rem', color: '#111827' }}>[ 03 ] TREND & FAKTA UNIK</h3>
-                  <span className="mono-tag" style={{ color: '#7c3aed' }}>GLOBAL PULSE</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, fontSize: '0.86rem' }}>
-                  <div>
-                    <strong style={{ color: '#111827', display: 'block', marginBottom: '0.3rem' }}>
-                      🌐 Gelombang Perbincangan:
-                    </strong>
-                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.5, background: '#f8f9fa', padding: '0.75rem', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                      {insightResult.trend.trend}
-                    </p>
-                  </div>
-
-                  <div>
-                    <strong style={{ color: '#7c3aed', display: 'block', marginBottom: '0.3rem' }}>
-                      💡 Fakta Menarik Pembuka Pikiran:
-                    </strong>
-                    <p style={{ color: 'var(--text-secondary)', lineHeight: 1.5, background: '#faf5ff', padding: '0.75rem', borderRadius: '10px', border: '1px solid #f3e8ff' }}>
-                      {insightResult.trend.faktaUnik}
-                    </p>
-                  </div>
-
-                  <div style={{ marginTop: 'auto', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', paddingTop: '0.75rem' }}>
-                    {insightResult.trend.kataMutiara}
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </section>
         )}
       </div>

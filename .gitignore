@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Dokumen Proposal & Script Generator (agar tidak ikut ter-push ke Git)
+*.docx
+~$*.docx
+generate_proposal*.py
+.agents/
